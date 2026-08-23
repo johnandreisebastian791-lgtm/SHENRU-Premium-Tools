@@ -889,24 +889,42 @@ def shorten():
 
 # ── AI ────────────────────────────────────────────────────────────────────────
 def claude(messages, system=None, max_tokens=1500):
-    h={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"}
-    b={"model":"claude-sonnet-4-6","max_tokens":max_tokens,"messages":messages}
-    if system: b["system"]=system
-    r=requests.post("https://api.anthropic.com/v1/messages",headers=h,json=b,timeout=40)
-    r.raise_for_status()
+    h = {
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
+    b = {
+        "model": "claude-3-5-sonnet-20241022",   # ← FIXED MODEL
+        "max_tokens": max_tokens,
+        "messages": messages
+    }
+    if system:
+        b["system"] = system
+    r = requests.post("https://api.anthropic.com/v1/messages", headers=h, json=b, timeout=40)
+    if r.status_code != 200:
+        raise Exception(f"Anthropic API error: {r.status_code} - {r.text}")
+    
     return r.json()["content"][0]["text"]
 
 @app.post("/api/chat")
 @require_key
 def chat():
-    if not ANTHROPIC_KEY: return jsonify(error="Set ANTHROPIC_API_KEY env var")
-    d=request.get_json(force=True)
-    msg=d.get("message","").strip(); hist=d.get("history",[])[-20:]
-    if not msg: return jsonify(error="Empty")
+    if not ANTHROPIC_KEY:
+        return jsonify(error="Set ANTHROPIC_API_KEY env var")
+    d = request.get_json(force=True)
+    msg = d.get("message", "").strip()
+    hist = d.get("history", [])[-20:]
+    if not msg:
+        return jsonify(error="Empty")
     try:
-        return jsonify(response=claude(hist+[{"role":"user","content":msg}],
-                                       system="You are a helpful, intelligent assistant."))
-    except Exception as e: return jsonify(error=str(e))
+        response = claude(
+            hist + [{"role": "user", "content": msg}],
+            system="You are a helpful, intelligent assistant."
+        )
+        return jsonify(response=response)
+    except Exception as e:
+        return jsonify(error=str(e))
 
 @app.post("/api/ai")
 @require_key
