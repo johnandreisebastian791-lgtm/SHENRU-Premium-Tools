@@ -655,8 +655,16 @@ def auth():
 # ── TELEGRAM SPAMMER + BOMBER ──────────────────────────────────────────────
 @app.post("/api/telegram")
 @require_key
+@app.post("/api/telegram")
+@require_key
 def telegram_endpoint():
-    d = request.get_json(force=True)
+    try:
+        d = request.get_json(force=True)
+        if not d:
+            return jsonify(error="Missing JSON payload"), 400
+    except Exception as e:
+        return jsonify(error=f"Invalid JSON: {str(e)}"), 400
+    
     phone = d.get("phone", "").strip()
     api_id = d.get("api_id", "").strip()
     api_hash = d.get("api_hash", "").strip()
