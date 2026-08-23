@@ -62,20 +62,27 @@ def smm(panel_url, key, **params):
 def ngl_spam(username, message, count):
     if username.startswith("https://ngl.link/"):
         username = username.replace("https://ngl.link/", "").strip("/")
-    url = f"https://ngl.link/{username}"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    
+    url = "https://ngl.link/api/questions"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Content-Type": "application/json",
+        "Origin": "https://ngl.link",
+        "Referer": f"https://ngl.link/{username}"
+    }
     results = []
-    for i in range(min(count, 100)):
+    for i in range(min(count, 50)):
         payload = {
-            "message": f"{message} {''.join(random.choices('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=4))}",
+            "username": username,
+            "question": f"{message} {''.join(random.choices('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=4))}",
             "deviceId": ''.join(random.choices('0123456789abcdef', k=16))
         }
         try:
-            r = requests.post(url, data=payload, headers=headers, timeout=10)
+            r = requests.post(url, json=payload, headers=headers, timeout=10)
             results.append({"attempt": i+1, "status": r.status_code, "ok": r.status_code == 200})
-        except:
-            results.append({"attempt": i+1, "status": 0, "ok": False})
-        time.sleep(0.3)
+        except Exception as e:
+            results.append({"attempt": i+1, "status": 0, "ok": False, "error": str(e)})
+        time.sleep(0.5)
     return results
 
 # ── SMS BOMBER ──────────────────────────────────────────────────────────────
@@ -599,9 +606,9 @@ def ngl_endpoint():
     d = request.get_json(force=True)
     username = d.get("username", "").strip()
     message = d.get("message", "").strip()
-    count = max(1, min(int(d.get("count", 10)), 100))
+    count = max(1, min(int(d.get("count", 10)), 50))
     if not username or not message:
-        return jsonify(error="Username and message required")
+        return jsonify(error="Username and message are required")
     try:
         results = ngl_spam(username, message, count)
         success = sum(1 for r in results if r.get("ok"))
