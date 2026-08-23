@@ -655,8 +655,6 @@ def auth():
 # ── TELEGRAM SPAMMER + BOMBER ──────────────────────────────────────────────
 @app.post("/api/telegram")
 @require_key
-@app.post("/api/telegram")
-@require_key
 def telegram_endpoint():
     try:
         d = request.get_json(force=True)
