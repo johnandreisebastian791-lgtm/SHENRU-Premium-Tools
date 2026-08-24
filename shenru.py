@@ -656,13 +656,19 @@ def auth():
 @app.post("/api/telegram")
 @require_key
 def telegram_endpoint():
-    try:
-        d = request.get_json(force=True)
-        if not d:
-            return jsonify(error="Missing JSON payload"), 400
-    except Exception as e:
-        return jsonify(error=f"Invalid JSON: {str(e)}"), 400
+    # 1. Check if request has JSON
+    if not request.is_json:
+        return jsonify(error="Content-Type must be application/json"), 400
     
+    # 2. Safely parse JSON, catch any errors
+    try:
+        d = request.get_json(force=True, silent=True)
+        if d is None:
+            return jsonify(error="Invalid or empty JSON payload"), 400
+    except Exception as e:
+        return jsonify(error=f"JSON parsing error: {str(e)}"), 400
+    
+    # 3. Extract fields with defaults
     phone = d.get("phone", "").strip()
     api_id = d.get("api_id", "").strip()
     api_hash = d.get("api_hash", "").strip()
@@ -671,6 +677,7 @@ def telegram_endpoint():
     count = max(1, min(int(d.get("count", 10)), 200))
     mode = d.get("mode", "spam")
     
+    # 4. Validate required fields
     if not phone or not api_id or not api_hash:
         return jsonify(error="Phone number, API ID, and API Hash are required"), 400
     if not target or not message:
