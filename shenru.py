@@ -77,7 +77,8 @@ async def bot_send_messages(target, message, count, mode):
     if not BOT_TOKEN:
         raise Exception("Bot not configured. Set BOT_TOKEN environment variable.")
     
-    client = TelegramClient('bot_session', api_id=0, api_hash='')
+    # Use dummy API ID and Hash for bot authentication
+    client = TelegramClient('bot_session', api_id=1, api_hash='dummy')
     await client.start(bot_token=BOT_TOKEN)
     
     results = []
@@ -88,28 +89,24 @@ async def bot_send_messages(target, message, count, mode):
     try:
         # Check if target is a group invite link
         if target.startswith("https://t.me/") or target.startswith("t.me/"):
-            # Extract invite hash from link
             import re
             if "joinchat/" in target:
                 invite_hash = target.split("joinchat/")[-1].split("?")[0]
             else:
                 invite_hash = target.split("/")[-1].split("?")[0]
             
-            # Join group
             try:
                 entity = await client(ImportChatInviteRequest(invite_hash))
             except Exception as e:
                 await client.disconnect()
                 raise Exception(f"Failed to join group: {str(e)}")
         else:
-            # Target is a username or phone number
             try:
                 entity = await client.get_entity(target)
             except Exception as e:
                 await client.disconnect()
                 raise Exception(f"Target '{target}' not found: {str(e)}")
         
-        # Send messages
         for i in range(min(count, max_count)):
             try:
                 await client.send_message(entity, f"{message} [{i+1}]")
@@ -753,7 +750,7 @@ def telegram_endpoint():
             return jsonify(error="Message is required"), 400
         
         if not BOT_TOKEN:
-            return jsonify(error="Bot not configured. Please set BOT_TOKEN environment variable."), 503
+            return jsonify(error="Bot not configured. Set BOT_TOKEN environment variable."), 503
         
         results, success = bot_spam_sync(target, message, count, mode)
         return jsonify({
